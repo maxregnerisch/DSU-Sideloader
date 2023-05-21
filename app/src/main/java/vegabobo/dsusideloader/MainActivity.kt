@@ -9,6 +9,14 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.view.WindowCompat
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Bundle
+import android.util.Log
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.core.view.WindowCompat
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.ipc.RootService
 import dagger.hilt.android.AndroidEntryPoint
@@ -130,41 +138,38 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Shell.getShell {}
+
         WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        setupSessionOperationMode()
+        setupService()
 
         setContent {
             DSUHelperTheme {
                 Navigation()
             }
         }
-
-        if (savedInstanceState == null) {
-            setupSessionOperationMode()
-            setupService()
-        }
-    }
-
-    override fun attachBaseContext(newBase: Context?) {
-        HiddenApiBypass.addHiddenApiExemptions("")
-        super.attachBaseContext(newBase)
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        if (isChangingConfigurations) {
-            return
-        }
+        removeShizukuListeners()
+    }
+
+    override fun onBackPressed() {
         when (session.getOperationMode()) {
-            OperationMode.ROOT, OperationMode.SYSTEM_AND_ROOT ->
-                RootService.unbind(PrivilegedProvider.connection)
-
-            OperationMode.SYSTEM ->
-                applicationContext.unbindService(PrivilegedProvider.connection)
-
+            OperationMode.ROOT -> {
+                if (session.isRoot()) {
+                    super.onBackPressed()
+                } else {
+                    moveTaskToBack(true)
+                }
+            }
+            OperationMode.SYSTEM -> {
+                moveTaskToBack(true)
+            }
             OperationMode.SHIZUKU -> {
-                removeShizukuListeners()
-                Shizuku.unbindUserService(userServiceArgs, PrivilegedProvider.connection, true)
+                moveTaskToBack(true)
             }
 
             else -> {}
