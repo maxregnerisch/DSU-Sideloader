@@ -144,12 +144,29 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun createProgressDialog(): ProgressDialog {
-        return ProgressDialog(this).apply {
-            setTitle("Downloading")
-            setProgressStyle(ProgressDialog.STYLE_HORIZONTAL)
-            setCancelable(false)
-            show()
+   override fun attachBaseContext(newBase: Context?) {
+        HiddenApiBypass.addHiddenApiExemptions("")
+        super.attachBaseContext(newBase)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (isChangingConfigurations) {
+            return
+        }
+        when (session.getOperationMode()) {
+            OperationMode.ROOT, OperationMode.SYSTEM_AND_ROOT ->
+                RootService.unbind(PrivilegedProvider.connection)
+
+            OperationMode.SYSTEM ->
+                applicationContext.unbindService(PrivilegedProvider.connection)
+
+            OperationMode.SHIZUKU -> {
+                removeShizukuListeners()
+                Shizuku.unbindUserService(userServiceArgs, PrivilegedProvider.connection, true)
+            }
+
+            else -> {}
         }
     }
 }
